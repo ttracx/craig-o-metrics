@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Craig-O-Metrics
+
+Privacy-focused analytics dashboard for the Craig-O Suite.
+
+## Features
+
+- **Page Views** - Track every page visit across your sites
+- **Unique Visitors** - Understand your real audience size
+- **Referrer Tracking** - See where your traffic comes from
+- **Geographic Data** - Country and city breakdown
+- **Device Breakdown** - Desktop, mobile, tablet analytics
+- **Custom Events** - Track button clicks, form submissions, and more
+- **Real-Time Dashboard** - Watch visitors and events live
+- **Retention Metrics** - Cohort analysis for user retention
+- **Export Data** - Download your data in CSV or JSON format
+- **API Access** - Integrate analytics into your workflows
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Database**: Neon PostgreSQL with Prisma ORM
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Payments**: Stripe
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Neon PostgreSQL database
+- Stripe account
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/ttracx/craig-o-metrics.git
+cd craig-o-metrics
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+
+# Push database schema
+npx prisma db push
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL="postgresql://..."
+STRIPE_SECRET_KEY="sk_live_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."
+NEXT_PUBLIC_STRIPE_PRICE_ID="price_..."
+NEXT_PUBLIC_APP_URL="https://your-domain.com"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tracking Script
 
-## Learn More
+Add this script to your website to start tracking:
 
-To learn more about Next.js, take a look at the following resources:
+```html
+<script>
+  (function() {
+    var apiKey = 'YOUR_API_KEY';
+    var endpoint = 'https://craig-o-metrics.vercel.app/api/track';
+    
+    fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: apiKey,
+        type: 'pageview',
+        data: { path: window.location.pathname }
+      })
+    });
+  })();
+</script>
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Pricing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Pro Plan**: $19/month
+- Unlimited websites
+- Unlimited pageviews
+- All features included
+- Email support
 
-## Deploy on Vercel
+## Part of the Craig-O Suite
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Craig-O-Metrics is part of the Craig-O Suite by VibeCaaS, a collection of tools for modern businesses.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+Proprietary - VibeCaaS © 2026

@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Site {
+  id        String   @id @default(cuid())
+  name      String
+  domain    String   @unique
+  apiKey    String   @unique @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  pageViews    PageView[]
+  events       Event[]
+  sessions     Session[]
+}
+
+model PageView {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  
+  path        String
+  referrer    String?
+  userAgent   String?
+  
+  // Geographic data
+  country     String?
+  region      String?
+  city        String?
+  
+  // Device data
+  browser     String?
+  os          String?
+  device      String?  // desktop, mobile, tablet
+  
+  // Session tracking
+  sessionId   String?
+  visitorId   String   // Unique visitor identifier (hashed)
+  
+  timestamp   DateTime @default(now())
+  
+  @@index([siteId, timestamp])
+  @@index([siteId, path])
+  @@index([visitorId])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  
+  name        String
+  properties  Json?
+  
+  visitorId   String
+  sessionId   String?
+  path        String?
+  
+  timestamp   DateTime @default(now())
+  
+  @@index([siteId, timestamp])
+  @@index([siteId, name])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  siteId      String
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  
+  visitorId   String
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  
+  entryPage   String?
+  exitPage    String?
+  pageCount   Int      @default(1)
+  duration    Int?     // in seconds
+  
+  // Source tracking
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  
+  @@index([siteId, startedAt])
+  @@index([visitorId])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  stripeCustomerId String?
+  subscriptionId   String?
+  subscriptionStatus String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
