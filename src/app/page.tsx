@@ -174,17 +174,20 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-blue-400" />
-              <span className="text-white font-semibold">Craig-O-Metrics</span>
-            </div>
-            <p className="text-sm">
-              Part of the <span className="text-white">Craig-O Suite</span> by VibeCaaS
-            </p>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <BarChart3 className="w-6 h-6 text-blue-400" />
+            <span className="text-white font-semibold">Craig-O-Metrics</span>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-            © {new Date().getFullYear()} Craig-O-Metrics. All rights reserved.
+          <div className="border-t border-gray-800 mt-4 pt-8 text-sm text-center">
+            © 2026 Craig-O-Metrics powered by{' '}
+            <a href="https://vibecaas.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+              VibeCaaS.com
+            </a>{' '}
+            a division of{' '}
+            <a href="https://neuralquantum.ai/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+              NeuralQuantum.ai
+            </a>{' '}
+            LLC. All rights reserved.
           </div>
         </div>
       </footer>
