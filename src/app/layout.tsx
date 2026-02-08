@@ -1,29 +1,24 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
+import type { Metadata } from 'next'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Craig-O-Metrics | Privacy-Focused Analytics",
-  description: "Simple, fast, and GDPR-compliant analytics for your websites and apps. Part of the Craig-O Suite.",
-  keywords: ["analytics", "web analytics", "privacy", "GDPR", "craig-o suite"],
-  authors: [{ name: "VibeCaaS" }],
-  openGraph: {
-    title: "Craig-O-Metrics | Privacy-Focused Analytics",
-    description: "Simple, fast, and GDPR-compliant analytics for your websites and apps.",
-    type: "website",
+  title: 'CRAIG-O-METRICS | Business Metrics Dashboard',
+  description: 'Track your KPIs, MRR, churn, and growth with beautiful charts and weekly reports.',
+  icons: {
+    icon: '/favicon.ico',
   },
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className="min-h-screen bg-[#0a0a0a] text-white antialiased">
+        {children}
+      </body>
     </html>
-  );
+  )
 }

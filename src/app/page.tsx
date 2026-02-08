@@ -1,196 +1,316 @@
 'use client'
 
-import Link from 'next/link'
-import { BarChart3, Users, Globe, Zap, Shield, Download, ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Header } from '@/components/layout/header'
+import { MetricCard } from '@/components/dashboard/metric-card'
+import { MetricChart } from '@/components/dashboard/metric-chart'
+import { AddMetricModal } from '@/components/dashboard/add-metric-modal'
+import { AddValueModal } from '@/components/dashboard/add-value-modal'
+import { EmptyState } from '@/components/dashboard/empty-state'
+import { Plus, TrendingUp, DollarSign, Users, Percent } from 'lucide-react'
 
-export default function Home() {
+interface MetricValue {
+  id: string
+  value: number
+  date: string
+  notes?: string
+}
+
+interface Metric {
+  id: string
+  name: string
+  type: 'currency' | 'percentage' | 'number'
+  source: string
+  color: string
+  values: MetricValue[]
+  currentValue?: number
+  previousValue?: number
+  growth?: number
+}
+
+// Demo data for showcase
+const DEMO_METRICS: Metric[] = [
+  {
+    id: 'mrr',
+    name: 'Monthly Recurring Revenue',
+    type: 'currency',
+    source: 'stripe',
+    color: '#10B981',
+    currentValue: 24850,
+    previousValue: 22100,
+    growth: 12.4,
+    values: [
+      { id: '1', value: 18500, date: '2024-10-01' },
+      { id: '2', value: 19200, date: '2024-11-01' },
+      { id: '3', value: 20800, date: '2024-12-01' },
+      { id: '4', value: 22100, date: '2025-01-01' },
+      { id: '5', value: 24850, date: '2025-02-01' },
+    ],
+  },
+  {
+    id: 'customers',
+    name: 'Active Customers',
+    type: 'number',
+    source: 'stripe',
+    color: '#3B82F6',
+    currentValue: 347,
+    previousValue: 312,
+    growth: 11.2,
+    values: [
+      { id: '1', value: 245, date: '2024-10-01' },
+      { id: '2', value: 268, date: '2024-11-01' },
+      { id: '3', value: 289, date: '2024-12-01' },
+      { id: '4', value: 312, date: '2025-01-01' },
+      { id: '5', value: 347, date: '2025-02-01' },
+    ],
+  },
+  {
+    id: 'churn',
+    name: 'Monthly Churn Rate',
+    type: 'percentage',
+    source: 'manual',
+    color: '#EF4444',
+    currentValue: 2.3,
+    previousValue: 2.8,
+    growth: -17.9,
+    values: [
+      { id: '1', value: 3.5, date: '2024-10-01' },
+      { id: '2', value: 3.1, date: '2024-11-01' },
+      { id: '3', value: 2.9, date: '2024-12-01' },
+      { id: '4', value: 2.8, date: '2025-01-01' },
+      { id: '5', value: 2.3, date: '2025-02-01' },
+    ],
+  },
+]
+
+export default function Dashboard() {
+  const [metrics, setMetrics] = useState<Metric[]>([])
+  const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null)
+  const [showAddMetric, setShowAddMetric] = useState(false)
+  const [showAddValue, setShowAddValue] = useState(false)
+  const [isDemo, setIsDemo] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [plan, setPlan] = useState<'free' | 'pro'>('free')
+
+  useEffect(() => {
+    // Check for saved email in localStorage
+    const savedEmail = localStorage.getItem('craig-o-metrics-email')
+    if (savedEmail) {
+      setUserEmail(savedEmail)
+      setIsDemo(false)
+      fetchMetrics(savedEmail)
+    } else {
+      setMetrics(DEMO_METRICS)
+      setSelectedMetric(DEMO_METRICS[0])
+    }
+  }, [])
+
+  const fetchMetrics = async (email: string) => {
+    try {
+      const res = await fetch(`/api/metrics?email=${encodeURIComponent(email)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.metrics.length > 0) {
+          setMetrics(data.metrics)
+          setSelectedMetric(data.metrics[0])
+        } else {
+          setMetrics([])
+          setSelectedMetric(null)
+        }
+        setPlan(data.plan || 'free')
+      }
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error)
+    }
+  }
+
+  const handleLogin = (email: string) => {
+    localStorage.setItem('craig-o-metrics-email', email)
+    setUserEmail(email)
+    setIsDemo(false)
+    fetchMetrics(email)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('craig-o-metrics-email')
+    setUserEmail(null)
+    setIsDemo(true)
+    setMetrics(DEMO_METRICS)
+    setSelectedMetric(DEMO_METRICS[0])
+    setPlan('free')
+  }
+
+  const handleAddMetric = async (metric: { name: string; type: string; color: string }) => {
+    if (!userEmail) return
+
+    try {
+      const res = await fetch('/api/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...metric, email: userEmail }),
+      })
+      if (res.ok) {
+        fetchMetrics(userEmail)
+        setShowAddMetric(false)
+      }
+    } catch (error) {
+      console.error('Failed to add metric:', error)
+    }
+  }
+
+  const handleAddValue = async (value: { value: number; date: string; notes?: string }) => {
+    if (!userEmail || !selectedMetric) return
+
+    try {
+      const res = await fetch('/api/metrics/values', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          ...value, 
+          metricId: selectedMetric.id,
+          email: userEmail 
+        }),
+      })
+      if (res.ok) {
+        fetchMetrics(userEmail)
+        setShowAddValue(false)
+      }
+    } catch (error) {
+      console.error('Failed to add value:', error)
+    }
+  }
+
+  const maxMetrics = plan === 'pro' ? Infinity : 3
+  const canAddMetric = metrics.length < maxMetrics
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-8 h-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">Craig-O-Metrics</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-gray-600 hover:text-gray-900">Features</a>
-            <Link href="/pricing" className="text-gray-600 hover:text-gray-900">Pricing</Link>
-            <Link href="/docs" className="text-gray-600 hover:text-gray-900">Docs</Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <Link 
-              href="/dashboard"
-              className="px-4 py-2 text-gray-700 hover:text-gray-900"
-            >
-              Sign In
-            </Link>
-            <Link 
-              href="/dashboard"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Get Started
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      <Header 
+        email={userEmail} 
+        onLogin={handleLogin} 
+        onLogout={handleLogout}
+        plan={plan}
+        isDemo={isDemo}
+      />
 
-      {/* Hero */}
-      <section className="max-w-7xl mx-auto px-6 py-24 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full text-blue-700 text-sm font-medium mb-6">
-          <Zap className="w-4 h-4" />
-          Part of the Craig-O Suite
-        </div>
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-          Privacy-Focused Analytics<br />
-          <span className="text-blue-600">Built for Modern Teams</span>
-        </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Get the insights you need without compromising user privacy. 
-          Simple, fast, and GDPR-compliant analytics for your websites and apps.
-        </p>
-        <div className="flex items-center justify-center gap-4">
-          <Link 
-            href="/dashboard"
-            className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg flex items-center gap-2"
-          >
-            Start Free Trial <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link 
-            href="#demo"
-            className="px-8 py-4 bg-white text-gray-700 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-semibold text-lg"
-          >
-            View Demo
-          </Link>
-        </div>
-        <p className="mt-4 text-sm text-gray-500">No credit card required • 14-day free trial</p>
-      </section>
-
-      {/* Dashboard Preview */}
-      <section className="max-w-6xl mx-auto px-6 pb-24">
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-          <div className="bg-gray-100 px-4 py-3 flex items-center gap-2 border-b">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <div className="w-3 h-3 rounded-full bg-green-400"></div>
-            </div>
-            <div className="flex-1 text-center text-sm text-gray-500">
-              dashboard.craig-o-metrics.com
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Demo Banner */}
+        {isDemo && (
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex items-center justify-between">
+            <div>
+              <p className="text-blue-400 font-medium">👋 You&apos;re viewing demo data</p>
+              <p className="text-sm text-gray-400">Enter your email to start tracking your own metrics</p>
             </div>
           </div>
-          <div className="p-8 bg-gradient-to-br from-gray-50 to-blue-50/30">
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              {[
-                { label: 'Page Views', value: '24,853', change: '+12%' },
-                { label: 'Visitors', value: '8,421', change: '+8%' },
-                { label: 'Avg. Duration', value: '3m 24s', change: '+5%' },
-                { label: 'Bounce Rate', value: '42%', change: '-3%' },
-              ].map((stat, i) => (
-                <div key={i} className="bg-white p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-500">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-green-600">{stat.change}</p>
+        )}
+
+        {/* Metric Cards */}
+        {metrics.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {metrics.map((metric) => (
+                <MetricCard
+                  key={metric.id}
+                  metric={metric}
+                  isSelected={selectedMetric?.id === metric.id}
+                  onClick={() => setSelectedMetric(metric)}
+                />
+              ))}
+              {!isDemo && canAddMetric && (
+                <button
+                  onClick={() => setShowAddMetric(true)}
+                  className="flex flex-col items-center justify-center p-6 bg-[#1a1a1a] border-2 border-dashed border-gray-700 rounded-xl hover:border-blue-500 hover:bg-blue-500/5 transition-all group"
+                >
+                  <Plus className="w-8 h-8 text-gray-600 group-hover:text-blue-500 mb-2" />
+                  <span className="text-gray-500 group-hover:text-blue-400">Add Metric</span>
+                </button>
+              )}
+            </div>
+
+            {/* Chart Section */}
+            {selectedMetric && (
+              <div className="bg-[#1a1a1a] rounded-xl p-6 border border-gray-800">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold">{selectedMetric.name}</h2>
+                    <p className="text-sm text-gray-400 capitalize">
+                      Source: {selectedMetric.source} • {selectedMetric.type}
+                    </p>
+                  </div>
+                  {!isDemo && (
+                    <button
+                      onClick={() => setShowAddValue(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Value
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-            <div className="bg-white rounded-lg border border-gray-200 h-48 flex items-center justify-center">
-              <div className="flex items-end gap-1">
-                {[40, 65, 55, 80, 70, 90, 85].map((h, i) => (
-                  <div 
-                    key={i}
-                    className="w-12 bg-blue-500 rounded-t transition-all"
-                    style={{ height: `${h}%` }}
-                  />
-                ))}
+                <MetricChart metric={selectedMetric} />
               </div>
+            )}
+          </>
+        ) : (
+          !isDemo && (
+            <EmptyState 
+              onAddMetric={() => setShowAddMetric(true)}
+              canAdd={canAddMetric}
+            />
+          )
+        )}
+
+        {/* Quick Stats */}
+        {metrics.length > 0 && (
+          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-800">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm">Total Metrics</span>
+              </div>
+              <p className="text-2xl font-bold">{metrics.length}</p>
+            </div>
+            <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-800">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <DollarSign className="w-4 h-4" />
+                <span className="text-sm">Revenue Metrics</span>
+              </div>
+              <p className="text-2xl font-bold">{metrics.filter(m => m.type === 'currency').length}</p>
+            </div>
+            <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-800">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <Users className="w-4 h-4" />
+                <span className="text-sm">Data Points</span>
+              </div>
+              <p className="text-2xl font-bold">{metrics.reduce((acc, m) => acc + (m.values?.length || 0), 0)}</p>
+            </div>
+            <div className="bg-[#1a1a1a] rounded-xl p-4 border border-gray-800">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <Percent className="w-4 h-4" />
+                <span className="text-sm">Avg Growth</span>
+              </div>
+              <p className="text-2xl font-bold">
+                {(metrics.reduce((acc, m) => acc + (m.growth || 0), 0) / metrics.length).toFixed(1)}%
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+        )}
+      </main>
 
-      {/* Features */}
-      <section id="features" className="bg-white py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
-            Everything You Need
-          </h2>
-          <p className="text-gray-600 text-center mb-16 max-w-2xl mx-auto">
-            Powerful analytics features without the complexity. Get started in minutes.
-          </p>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: Users, title: 'Unique Visitors', desc: 'Track real users, not just pageviews. Understand your actual audience size.' },
-              { icon: Globe, title: 'Geographic Data', desc: 'See where your visitors come from with detailed country and city breakdowns.' },
-              { icon: BarChart3, title: 'Real-Time Dashboard', desc: 'Watch your traffic live. See visitors and events as they happen.' },
-              { icon: Zap, title: 'Custom Events', desc: 'Track button clicks, form submissions, and any custom action.' },
-              { icon: Shield, title: 'Privacy-First', desc: 'GDPR compliant. No cookies. No personal data collection.' },
-              { icon: Download, title: 'Export Data', desc: 'Download your analytics data anytime in CSV or JSON format.' },
-            ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all">
-                <feature.icon className="w-10 h-10 text-blue-600 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing CTA */}
-      <section className="py-24 bg-blue-600">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="text-blue-100 mb-8 text-lg">
-            One plan. All features. No surprises.
-          </p>
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-auto">
-            <p className="text-gray-500 mb-2">Pro Plan</p>
-            <p className="text-5xl font-bold text-gray-900 mb-2">
-              $19<span className="text-lg font-normal text-gray-500">/month</span>
-            </p>
-            <ul className="text-left space-y-3 my-6">
-              {['Unlimited websites', 'Unlimited pageviews', 'Real-time dashboard', 'Custom events', 'Data export', 'API access'].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-gray-600">
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <Link 
-              href="/pricing"
-              className="block w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-            >
-              Start Free Trial
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <BarChart3 className="w-6 h-6 text-blue-400" />
-            <span className="text-white font-semibold">Craig-O-Metrics</span>
-          </div>
-          <div className="border-t border-gray-800 mt-4 pt-8 text-sm text-center">
-            © 2026 Craig-O-Metrics powered by{' '}
-            <a href="https://vibecaas.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-              VibeCaaS.com
-            </a>{' '}
-            a division of{' '}
-            <a href="https://neuralquantum.ai/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-              NeuralQuantum.ai
-            </a>{' '}
-            LLC. All rights reserved.
-          </div>
-        </div>
-      </footer>
-    </main>
+      {/* Modals */}
+      {showAddMetric && (
+        <AddMetricModal
+          onClose={() => setShowAddMetric(false)}
+          onAdd={handleAddMetric}
+        />
+      )}
+      {showAddValue && selectedMetric && (
+        <AddValueModal
+          metric={selectedMetric}
+          onClose={() => setShowAddValue(false)}
+          onAdd={handleAddValue}
+        />
+      )}
+    </div>
   )
 }

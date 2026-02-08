@@ -7,99 +7,82 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Site {
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String?
+  stripeCustomerId   String?  @unique
+  subscriptionId     String?
+  subscriptionStatus String   @default("free") // free, pro, canceled
+  stripeAccountId    String?  // Connected Stripe account for revenue data
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  metrics            Metric[]
+  metricValues       MetricValue[]
+  reports            Report[]
+}
+
+model Metric {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String   // e.g., "MRR", "Churn Rate", "Customer Count"
+  type        String   // currency, percentage, number
+  source      String   @default("manual") // manual, stripe
+  color       String   @default("#3B82F6") // Chart color
+  icon        String?  // Optional icon name
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  values      MetricValue[]
+  
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model MetricValue {
   id        String   @id @default(cuid())
-  name      String
-  domain    String   @unique
-  apiKey    String   @unique @default(cuid())
+  metricId  String
+  metric    Metric   @relation(fields: [metricId], references: [id], onDelete: Cascade)
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  value     Float
+  date      DateTime @db.Date
+  notes     String?
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([metricId, date])
+  @@index([metricId, date])
+  @@index([userId])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  email     String   // Recipient email
+  frequency String   @default("weekly") // weekly, monthly
+  dayOfWeek Int      @default(1) // 0=Sunday, 1=Monday, etc.
+  enabled   Boolean  @default(true)
+  lastSent  DateTime?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  pageViews    PageView[]
-  events       Event[]
-  sessions     Session[]
+  @@index([userId])
 }
 
-model PageView {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+model StripeEvent {
+  id        String   @id
+  type      String
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
   
-  path        String
-  referrer    String?
-  userAgent   String?
-  
-  // Geographic data
-  country     String?
-  region      String?
-  city        String?
-  
-  // Device data
-  browser     String?
-  os          String?
-  device      String?  // desktop, mobile, tablet
-  
-  // Session tracking
-  sessionId   String?
-  visitorId   String   // Unique visitor identifier (hashed)
-  
-  timestamp   DateTime @default(now())
-  
-  @@index([siteId, timestamp])
-  @@index([siteId, path])
-  @@index([visitorId])
-}
-
-model Event {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  
-  name        String
-  properties  Json?
-  
-  visitorId   String
-  sessionId   String?
-  path        String?
-  
-  timestamp   DateTime @default(now())
-  
-  @@index([siteId, timestamp])
-  @@index([siteId, name])
-}
-
-model Session {
-  id          String   @id @default(cuid())
-  siteId      String
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  
-  visitorId   String
-  startedAt   DateTime @default(now())
-  endedAt     DateTime?
-  
-  entryPage   String?
-  exitPage    String?
-  pageCount   Int      @default(1)
-  duration    Int?     // in seconds
-  
-  // Source tracking
-  referrer    String?
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
-  
-  @@index([siteId, startedAt])
-  @@index([visitorId])
-}
-
-model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String?
-  stripeCustomerId String?
-  subscriptionId   String?
-  subscriptionStatus String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  @@index([type, processed])
 }
